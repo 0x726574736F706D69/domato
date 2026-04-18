@@ -175,9 +175,9 @@
 <rule> = @container (min-height: <fuzzint>px) { <selector> { <declaration> } }
 <rule> = @container <csscustomident> (min-width: <fuzzint>px) { <selector> { <declaration> } }
 <rule> = @container style(<cssproperty>) { <selector> { <declaration> } }
-<rule> = @property <dashedident> { syntax: '<string min=3 max=20>'; inherits: false; initial-value: <fuzzint>; }
-<rule> = @property <dashedident> { syntax: '<color>'; inherits: true; initial-value: red; }
-<rule> = @property <dashedident> { syntax: '<length>'; inherits: false; initial-value: <fuzzint>px; }
+<rule> = @property <dashedident> { syntax: "*"; inherits: false; initial-value: <fuzzint>; }
+<rule> = @property <dashedident> { syntax: "<lt>color<gt>"; inherits: true; initial-value: red; }
+<rule> = @property <dashedident> { syntax: "<lt>length<gt>"; inherits: false; initial-value: <fuzzint>px; }
 <rule> = @scope (<element>) { <selector> { <declaration> } }
 <rule> = @scope (<element>) to (<element> <element>) { <selector> { <declaration> } }
 <rule> = @starting-style { <selector> { <declaration> } }
