@@ -231,7 +231,7 @@
 <rule> = @supports (display: block) { @function <css-func-name>() { result: <fuzzint>px; } }
 <rule> = @layer <csscustomident> { @function <css-func-name>() { result: <color>; } }
 
-<fontfacedeclaration>= <fontfacedescriptor>;
+<fontfacedeclaration> = <fontfacedescriptor>;
 <fontfacedeclaration> = <fontfacedescriptor>; <fontfacedescriptor>; <fontfacedescriptor>;
 <fontfacedeclaration> = <fontfacedescriptor>; <fontfacedescriptor>; <fontfacedescriptor>; <fontfacedescriptor>; <fontfacedescriptor>; <fontfacedescriptor>;
 
