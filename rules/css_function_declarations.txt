@@ -1,0 +1,183 @@
+#   Copyright 2017 Google Inc. All Rights Reserved.
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+# Grammar for CSSFunctionDeclarations fuzzing
+# Covers the declarations block inside a CSS @function rule
+
+!include common.txt
+
+# ---- Local variable names used inside @function bodies ----
+<fn-local-var> = --local<int min=1 max=5>
+<fn-local-var> = --tmp<int min=1 max=3>
+<fn-local-var> = --val
+<fn-local-var> = --x
+<fn-local-var> = --y
+<fn-local-var> = --a
+<fn-local-var> = --b
+
+# ---- CSS function names used in cross-function calls ----
+<fn-name> = --fuzz-a
+<fn-name> = --fuzz-b
+<fn-name> = --fuzz-c
+
+# ---- CSS length/percentage values ----
+<fn-length> = <fuzzint>px
+<fn-length> = <fuzzint>em
+<fn-length> = <fuzzint>rem
+<fn-length> = <fuzzint>%
+<fn-length> = <fuzzint>vw
+<fn-length> = <fuzzint>vh
+<fn-length> = 0
+
+# ---- Plain result values ----
+<fn-result-plain> = <fn-length>
+<fn-result-plain> = <color>
+<fn-result-plain> = none
+<fn-result-plain> = auto
+<fn-result-plain> = initial
+<fn-result-plain> = inherit
+<fn-result-plain> = unset
+<fn-result-plain> = revert
+
+# ---- Result values referencing local vars and args ----
+<fn-result-var> = var(<fn-local-var>)
+<fn-result-var> = var(--arg1)
+<fn-result-var> = var(--arg2)
+<fn-result-var> = var(<fn-local-var>, <fn-length>)
+<fn-result-var> = var(--arg1, <fn-length>)
+
+# ---- calc() expressions ----
+<fn-calc> = calc(<fn-length> + <fn-length>)
+<fn-calc> = calc(<fn-length> - <fn-length>)
+<fn-calc> = calc(<fn-length> * <fuzzint>)
+<fn-calc> = calc(var(--arg1) + <fn-length>)
+<fn-calc> = calc(var(<fn-local-var>) * <fuzzint>)
+<fn-calc> = calc(var(--arg1) + var(<fn-local-var>))
+<fn-calc> = calc(<fn-calc-nested>)
+
+<fn-calc-nested> = <fn-length> + calc(<fn-length> * <fuzzint>)
+<fn-calc-nested> = var(--arg1) + calc(var(<fn-local-var>) - <fn-length>)
+
+# ---- if() expressions ----
+<fn-if-condition> = style(--arg1: <fn-length>)
+<fn-if-condition> = (var(--arg1) > 0)
+
+<fn-if-expr> = if(style(--arg1: <fn-length>): <fn-result-plain>; else: <fn-result-plain>)
+<fn-if-expr> = if(style(--arg1: 0px): <fn-length>; else: <fn-length>)
+<fn-if-expr> = if(style(--arg1: <fn-length>): var(<fn-local-var>); else: <fn-length>)
+<fn-if-expr> = if(style(--arg1: <fn-length>): <fn-calc>; else: <fn-calc>)
+
+# ---- Cross-function calls ----
+<fn-cross-call> = <fn-name>(var(--arg1))
+<fn-cross-call> = --fuzz-b(var(--arg1), var(--arg2))
+<fn-cross-call> = --fuzz-a(<fn-length>)
+
+# ---- Result values (combined) ----
+<fn-result-value p=0.4> = <fn-result-plain>
+<fn-result-value p=0.3> = <fn-result-var>
+<fn-result-value p=0.15> = <fn-calc>
+<fn-result-value p=0.1> = <fn-if-expr>
+<fn-result-value p=0.05> = <fn-cross-call>
+
+# ---- Invalid / edge-case result values ----
+<fn-result-invalid> = !!!invalid!!!
+<fn-result-invalid> = <string min=1 max=20>
+<fn-result-invalid> = calc()
+<fn-result-invalid> = var()
+<fn-result-invalid> = 
+<fn-result-invalid> =    
+<fn-result-invalid> = \u0000
+<fn-result-invalid> = \uFFFF
+
+# ---- Local variable declaration values ----
+<fn-local-value p=0.5> = <fn-result-value>
+<fn-local-value p=0.3> = var(<fn-local-var>, <fn-length>)
+<fn-local-value p=0.1> = <fn-result-invalid>
+<fn-local-value p=0.1> = var(<fn-local-var>)
+
+# ---- Circular local var references ----
+<fn-circular-pair> = <fn-local-var>: var(<fn-local-var>)
+
+# ---- Single local declaration ----
+<fn-local-decl> = <fn-local-var>: <fn-local-value>
+
+# ---- Sets of local declarations (0 to 5) ----
+<fn-local-decls0> = 
+<fn-local-decls1> = <fn-local-decl>
+<fn-local-decls2> = <fn-local-decl>; <fn-local-decl>
+<fn-local-decls3> = <fn-local-decl>; <fn-local-decl>; <fn-local-decl>
+<fn-local-decls5> = <fn-local-decl>; <fn-local-decl>; <fn-local-decl>; <fn-local-decl>; <fn-local-decl>
+
+# ---- Full @function body declarations ----
+<fn-decls-body p=0.2> = result: <fn-result-value>
+<fn-decls-body p=0.2> = <fn-local-decls1>; result: <fn-result-value>
+<fn-decls-body p=0.2> = <fn-local-decls2>; result: <fn-result-value>
+<fn-decls-body p=0.2> = <fn-local-decls3>; result: <fn-result-value>
+<fn-decls-body p=0.1> = <fn-local-decls5>; result: <fn-result-value>
+<fn-decls-body p=0.1> = <fn-local-decls0>
+
+# ---- setProperty target ----
+<fn-set-prop-name> = result
+<fn-set-prop-name> = <fn-local-var>
+
+# ---- setProperty value for fuzzing ----
+<fn-set-prop-value p=0.5> = <fn-result-value>
+<fn-set-prop-value p=0.3> = <fn-local-value>
+<fn-set-prop-value p=0.2> = <fn-result-invalid>
+
+# ---- removeProperty target ----
+<fn-remove-prop-name> = result
+<fn-remove-prop-name> = <fn-local-var>
+<fn-remove-prop-name> = --nonexistent
+
+# ---- item() index ----
+<fn-item-index> = 0
+<fn-item-index> = 1
+<fn-item-index> = <fuzzint>
+<fn-item-index> = -1
+<fn-item-index> = 999999
+
+# ---- Individual JS mutation operations ----
+<fn-decl-op> = decls.setProperty('<fn-set-prop-name>', '<fn-set-prop-value>')
+<fn-decl-op> = decls.removeProperty('<fn-remove-prop-name>')
+<fn-decl-op> = decls.getPropertyValue('<fn-set-prop-name>')
+<fn-decl-op> = decls.item(<fn-item-index>)
+<fn-decl-op> = decls.length
+
+# ---- JS mutation snippet (wrapped in try/catch) ----
+<fn-decl-mutation root=true> = try { <fn-decl-op>; } catch(e) {}
+
+# ---- JS code-generation section for _generate_code() ----
+!varformat fuzzvar%05d
+!lineguard try { <line> } catch(e) {}
+
+!begin lines
+
+<new fnrule> = (function() { try { var _sh = document.styleSheets[0]; for (var _i = 0; _i < _sh.cssRules.length; _i++) { if (_sh.cssRules[_i].declarations) { return _sh.cssRules[_i]; } } } catch(e) {} return null; })();
+<new fndecls> = (<fnrule> && <fnrule>.declarations) ? <fnrule>.declarations : null;
+if (<fndecls>) { <fndecls>.setProperty('result', '<fn-result-value>'); }
+if (<fndecls>) { <fndecls>.removeProperty('result'); }
+if (<fndecls>) { <fndecls>.setProperty('<fn-local-var>', '<fn-length>'); }
+if (<fndecls>) { <fndecls>.removeProperty('<fn-local-var>'); }
+if (<fndecls>) { <fndecls>.getPropertyValue('result'); }
+if (<fndecls>) { <fndecls>.getPropertyValue('<fn-local-var>'); }
+if (<fndecls>) { <fndecls>.item(<fn-item-index>); }
+if (<fndecls>) { <fndecls>.length; }
+if (<fndecls>) { <fndecls>.setProperty('result', '<fn-result-invalid>'); }
+if (<fndecls>) { <fndecls>.setProperty('result', '<fn-calc>'); }
+if (<fndecls>) { <fndecls>.setProperty('result', '<fn-if-expr>'); }
+if (<fndecls>) { <fndecls>.setProperty('result', '<fn-cross-call>'); }
+if (<fndecls>) { <fndecls>.setProperty('<fn-local-var>', 'var(<fn-local-var>)'); }
+document.body.offsetWidth;
+
+!end lines

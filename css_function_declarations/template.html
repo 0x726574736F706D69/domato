@@ -1,0 +1,238 @@
+<!-- #   Copyright 2017 Google Inc. All Rights Reserved.
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+ -->
+<!DOCTYPE html>
+<html>
+<head>
+<style id="fuzz-style">
+/* CSS @function rules for CSSFunctionDeclarations fuzzing */
+<cssfunctiondeclfuzzer>
+</style>
+<script>
+
+function freememory() {
+  try { CollectGarbage(); } catch(err) { }
+  try { FuzzingFunctions.garbageCollect(); } catch(err) { }
+  try { window.gc(); } catch(err) { }
+}
+
+// Retrieve all @function rules from the style sheet
+function getFunctionRules(sheet) {
+  var fnRules = [];
+  try {
+    var rules = sheet.cssRules;
+    for (var i = 0; i < rules.length; i++) {
+      if (rules[i].constructor && rules[i].constructor.name === 'CSSFunctionRule') {
+        fnRules.push(rules[i]);
+      } else if (typeof rules[i].declarations !== 'undefined') {
+        fnRules.push(rules[i]);
+      }
+    }
+  } catch(e) {}
+  return fnRules;
+}
+
+function forceReflow() {
+  try { document.getElementById('target').offsetWidth; } catch(e) {}
+  try { document.body.offsetWidth; } catch(e) {}
+}
+
+function forceComputedStyle() {
+  try {
+    var cs = getComputedStyle(document.getElementById('target'));
+    cs.width;
+    cs.height;
+    cs.getPropertyValue('--fuzz-result');
+  } catch(e) {}
+}
+
+// Pattern 1: remove result then force reflow
+function patternRemoveResult(rule) {
+  try {
+    var decls = rule.declarations;
+    decls.removeProperty('result');
+    forceReflow();
+  } catch(e) {}
+}
+
+// Pattern 2: set result to circular cross-call
+function patternCircularCall(ruleA, ruleB) {
+  try {
+    ruleA.declarations.setProperty('result', '--fuzz-b(var(--arg1))');
+    ruleB.declarations.setProperty('result', '--fuzz-a(var(--arg1))');
+    forceReflow();
+  } catch(e) {}
+}
+
+// Pattern 3: rapid set/remove in rAF
+var rafCount = 0;
+var rafValues = ['10px', '20em', 'auto', 'none', 'calc(1px + 2em)', 'var(--local1)', 'inherit', ''];
+function patternRapidRaf(rule) {
+  if (!rule) return;
+  var loop = function() {
+    if (rafCount++ > 8) return;
+    try {
+      rule.declarations.setProperty('result', rafValues[Math.random() * rafValues.length | 0]);
+      rule.declarations.removeProperty('--local1');
+      rule.declarations.setProperty('--local1', rafValues[Math.random() * rafValues.length | 0]);
+      forceReflow();
+    } catch(e) {}
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+
+// Pattern 4: detached rule access
+function patternDetachedRule(sheet) {
+  try {
+    var ruleText = '@function --detach-test(--arg1: <length>) { result: var(--arg1); }';
+    var idx = sheet.cssRules.length;
+    sheet.insertRule(ruleText, idx);
+    var detachedRule = sheet.cssRules[idx];
+    sheet.deleteRule(idx);
+    try { detachedRule.declarations.setProperty('result', '42px'); } catch(e) {}
+    try { detachedRule.declarations.removeProperty('result'); } catch(e) {}
+    try { detachedRule.declarations.getPropertyValue('result'); } catch(e) {}
+    try { detachedRule.declarations.item(0); } catch(e) {}
+    try { detachedRule.declarations.length; } catch(e) {}
+  } catch(e) {}
+}
+
+// Pattern 5: mutate during getComputedStyle via MutationObserver
+function patternMutateDuringComputed(rule) {
+  if (!rule) return;
+  try {
+    var obs = new MutationObserver(function() {
+      try { rule.declarations.setProperty('result', '99px'); } catch(e) {}
+    });
+    obs.observe(document.body, {attributes: true, subtree: true, childList: true});
+    forceComputedStyle();
+    document.body.setAttribute('data-fuzz', Math.random());
+    obs.disconnect();
+  } catch(e) {}
+}
+
+// Pattern 6: set/remove local var that is referenced in result
+function patternLocalVarRef(rule) {
+  try {
+    var decls = rule.declarations;
+    decls.setProperty('--local1', '10px');
+    decls.setProperty('result', 'var(--local1)');
+    forceReflow();
+    decls.removeProperty('--local1');
+    forceReflow();
+    decls.setProperty('--local1', '99em');
+    forceReflow();
+  } catch(e) {}
+}
+
+// Pattern 7: many local variable declarations
+function patternManyLocals(rule) {
+  try {
+    var decls = rule.declarations;
+    for (var i = 0; i < 20; i++) {
+      decls.setProperty('--l' + i, i + 'px');
+    }
+    decls.setProperty('result', 'var(--l0)');
+    forceReflow();
+    for (var i = 0; i < 20; i++) {
+      decls.removeProperty('--l' + i);
+    }
+    forceReflow();
+  } catch(e) {}
+}
+
+// Pattern 8: item() with OOB indices
+function patternOobItem(rule) {
+  try {
+    var decls = rule.declarations;
+    decls.item(0);
+    decls.item(-1);
+    decls.item(999999);
+    decls.item(decls.length);
+    decls.item(decls.length - 1);
+  } catch(e) {}
+}
+
+// Pattern 9: mixing CSSFunctionDeclarations with inline style mutations
+function patternMixWithInlineStyle(rule) {
+  try {
+    var decls = rule.declarations;
+    decls.setProperty('result', '5px');
+    var el = document.getElementById('target');
+    if (el) el.style.width = '10px';
+    forceComputedStyle();
+    decls.setProperty('result', '20px');
+    if (el) el.style.width = '';
+    forceReflow();
+  } catch(e) {}
+}
+
+// Pattern 10: unicode/special chars in local var names
+function patternSpecialLocalNames(rule) {
+  if (!rule) return;
+  var specialNames = [
+    '--\u00e9-var', '--var\u0000', '--\u4e2d\u6587', '--var\uFFFF',
+    '---empty', '--a b', '--a\tb', '--'
+  ];
+  try {
+    var decls = rule.declarations;
+    for (var i = 0; i < specialNames.length; i++) {
+      try { decls.setProperty(specialNames[i], '1px'); } catch(e) {}
+      try { decls.getPropertyValue(specialNames[i]); } catch(e) {}
+      try { decls.removeProperty(specialNames[i]); } catch(e) {}
+    }
+  } catch(e) {}
+}
+
+function main() {
+  var sheet = document.getElementById('fuzz-style').sheet;
+  if (!sheet) return;
+
+  var fnRules = getFunctionRules(sheet);
+  var ruleA = fnRules[0] || null;
+  var ruleB = fnRules[1] || null;
+
+  if (ruleA) {
+    patternRemoveResult(ruleA);
+    patternLocalVarRef(ruleA);
+    patternManyLocals(ruleA);
+    patternOobItem(ruleA);
+    patternMixWithInlineStyle(ruleA);
+    patternSpecialLocalNames(ruleA);
+  }
+  if (ruleA && ruleB) {
+    patternCircularCall(ruleA, ruleB);
+  }
+  if (ruleA) {
+    patternRapidRaf(ruleA);
+  }
+  patternDetachedRule(sheet);
+  if (ruleA) {
+    patternMutateDuringComputed(ruleA);
+  }
+
+  // Also run the generated fuzz operations
+  <cssfunctiondeclmutfuzzer>
+
+  forceReflow();
+  freememory();
+}
+
+window.onload = main;
+</script>
+</head>
+<body>
+<div id="target" style="width:100px; height:100px; background: var(--fuzz-result, red);">target</div>
+</body>
+</html>
