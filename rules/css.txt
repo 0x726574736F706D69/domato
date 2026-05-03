@@ -196,7 +196,42 @@
 <rule> = @media (prefers-reduced-motion: reduce) { <selector> { <declaration> } }
 <rule> = @page { margin: <fuzzint>px; }
 
-<fontfacedeclaration> = <fontfacedescriptor>;
+# CSS @function at-rule (Chrome 133+, CSSFunctionDescriptors)
+# Custom function names
+<css-func-name> = --fuzz-a
+<css-func-name> = --fuzz-b
+<css-func-name> = --fuzz-c
+<css-func-name> = --fuzz-d
+<css-func-name> = --fuzz-e
+
+# Custom function calls
+<css-func-call nonrecursive> = <css-func-name>()
+<css-func-call nonrecursive> = <css-func-name>(<fuzzint>px)
+<css-func-call nonrecursive> = <css-func-name>(<color>)
+<css-func-call nonrecursive> = <css-func-name>(<fuzzint>)
+<css-func-call> = <css-func-name>(<css-func-call>)
+
+# @function rule variants
+<rule> = @function <css-func-name>() { result: <fuzzint>px; }
+<rule> = @function <css-func-name>() { result: <color>; }
+<rule> = @function <css-func-name>() { }
+<rule> = @function <css-func-name>() { result: ; }
+<rule> = @function <css-func-name>(--arg1) { result: var(--arg1); }
+<rule> = @function <css-func-name>(--arg1, --arg2) { result: calc(var(--arg1) + var(--arg2)); }
+<rule> = @function <css-func-name>(--arg1 <lt>type: <lt>length<gt><gt>) { result: var(--arg1); }
+<rule> = @function <css-func-name>(--arg1 <lt>type: <lt>number<gt><gt>) { result: calc(var(--arg1) * 1px); }
+<rule> = @function <css-func-name>(--arg1 <lt>type: <lt>color<gt><gt>) { result: var(--arg1); }
+<rule> = @function <css-func-name>(--arg1 <lt>type: <lt>length<gt><gt>: <fuzzint>px) { result: var(--arg1); }
+<rule> = @function <css-func-name>(--arg1 <lt>type: <lt>length<gt><gt>, --arg2 <lt>type: <lt>length<gt><gt>) { --local1: calc(var(--arg1) + var(--arg2)); result: var(--local1); }
+<rule> = @function <css-func-name>() returns <lt>length<gt> { result: <fuzzint>px; }
+<rule> = @function <css-func-name>() returns <lt>color<gt> { result: <color>; }
+<rule> = @function <css-func-name>(--arg1 <lt>type: <lt>length<gt><gt>) returns <lt>length<gt> { result: var(--arg1); }
+<rule> = @function <css-func-name>() { --local1: <fuzzint>px; result: var(--local1); }
+<rule> = @function <css-func-name>() { --local1: <color>; --local2: <fuzzint>px; result: var(--local1); }
+<rule> = @supports (display: block) { @function <css-func-name>() { result: <fuzzint>px; } }
+<rule> = @layer <csscustomident> { @function <css-func-name>() { result: <color>; } }
+
+<fontfacedeclaration>= <fontfacedescriptor>;
 <fontfacedeclaration> = <fontfacedescriptor>; <fontfacedescriptor>; <fontfacedescriptor>;
 <fontfacedeclaration> = <fontfacedescriptor>; <fontfacedescriptor>; <fontfacedescriptor>; <fontfacedescriptor>; <fontfacedescriptor>; <fontfacedescriptor>;
 
@@ -892,6 +927,7 @@
 <cssproperty_name> = white-space-collapse
 
 <cssproperty_value> = <cssproperty_-ms-flex-align>
+<cssproperty_value> = <css-func-call>
 <cssproperty_value> = <cssproperty_-ms-font-feature-settings>
 <cssproperty_value> = <cssproperty_-ms-text-combine-horizontal>
 <cssproperty_value> = <cssproperty_-ms-user-select>
