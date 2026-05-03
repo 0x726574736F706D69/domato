@@ -1,0 +1,194 @@
+<!-- saved from url=(0014)about:internet -->
+<!-- CSS @function fuzzer harness -->
+<!-- Requires Chrome 133+ with --enable-experimental-web-platform-features -->
+<html>
+<head>
+<style id="fuzz-style">
+/*begincss*/
+<cssfunctionfuzzer>
+/*endcss*/
+</style>
+<script>
+
+function freememory() {
+  try { CollectGarbage(); } catch(err) { }
+  try { FuzzingFunctions.garbageCollect(); } catch(err) { }
+  try { FuzzingFunctions.cycleCollect(); } catch(err) { }
+  try { window.gc(); } catch(err) { }
+}
+
+// CSSOM mutation: iterate CSSFunctionRules and fuzz their descriptors
+function mutateCSSFunctionRules() {
+  try {
+    var sheets = document.styleSheets;
+    for (var s = 0; s < sheets.length; s++) {
+      var rules;
+      try { rules = sheets[s].cssRules; } catch(e) { continue; }
+      for (var i = 0; i < rules.length; i++) {
+        var rule = rules[i];
+        try {
+          if (typeof CSSFunctionRule !== 'undefined' && rule instanceof CSSFunctionRule) {
+            var desc = rule.descriptors;
+            // Fuzz: set result descriptor
+            try { desc.result = '<cssfunctionfuzzer_value>'; } catch(e) {}
+            // Fuzz: clear result descriptor
+            try { desc.result = ''; } catch(e) {}
+            // Fuzz: set local variable descriptor
+            try { desc['--local1'] = '<cssfunctionfuzzer_value>'; } catch(e) {}
+            try { desc['--local2'] = '<cssfunctionfuzzer_value>'; } catch(e) {}
+            // Fuzz: set unknown/invalid descriptors
+            try { desc['--invalid'] = '<cssfunctionfuzzer_value>'; } catch(e) {}
+            // Fuzz: access CSS text
+            try { var t = rule.cssText; } catch(e) {}
+            try { rule.cssText = rule.cssText; } catch(e) {}
+          }
+        } catch(e) {}
+
+        // Also try inserting @function rules dynamically
+        try {
+          sheets[s].insertRule('@function --dyn() { result: <cssfunctionfuzzer_value>; }', 0);
+        } catch(e) {}
+        try {
+          sheets[s].insertRule('@function --dyn(--a <type: <length>>) { result: var(--a); }', 0);
+        } catch(e) {}
+      }
+    }
+  } catch(e) {}
+}
+
+// Force style recalculation
+function forceStyleRecalc() {
+  try {
+    var target = document.getElementById('target');
+    if (target) {
+      var cs = window.getComputedStyle(target);
+      // Access properties to force computation
+      try { cs.width; } catch(e) {}
+      try { cs.height; } catch(e) {}
+      try { cs.color; } catch(e) {}
+      try { cs.backgroundColor; } catch(e) {}
+      try { cs.fontSize; } catch(e) {}
+    }
+    // Also force on body
+    try { window.getComputedStyle(document.body).width; } catch(e) {}
+  } catch(e) {}
+}
+
+// Register custom properties that interact with @function
+function registerCustomProperties() {
+  try {
+    if (typeof CSS !== 'undefined' && CSS.registerProperty) {
+      try {
+        CSS.registerProperty({
+          name: '--cssvara',
+          syntax: '<length>',
+          inherits: false,
+          initialValue: '0px'
+        });
+      } catch(e) {}
+      try {
+        CSS.registerProperty({
+          name: '--cssvarb',
+          syntax: '<color>',
+          inherits: true,
+          initialValue: 'red'
+        });
+      } catch(e) {}
+      try {
+        CSS.registerProperty({
+          name: '--cssvarc',
+          syntax: '<number>',
+          inherits: false,
+          initialValue: '0'
+        });
+      } catch(e) {}
+    }
+  } catch(e) {}
+}
+
+// Create animations using custom function values
+function createFunctionAnimations() {
+  try {
+    var target = document.getElementById('target');
+    if (target && typeof target.animate === 'function') {
+      try {
+        target.animate([
+          { width: '--fuzz-a()' },
+          { width: '--fuzz-b()' }
+        ], { duration: 1000, iterations: 1 });
+      } catch(e) {}
+      try {
+        target.animate([
+          { '--cssvara': '--fuzz-a(10px)' },
+          { '--cssvara': '--fuzz-b(20px)' }
+        ], { duration: 500 });
+      } catch(e) {}
+    }
+  } catch(e) {}
+}
+
+// Dynamically insert @function rules into the stylesheet
+function insertFunctionRules() {
+  try {
+    var style = document.getElementById('fuzz-style');
+    if (style && style.sheet) {
+      var sheet = style.sheet;
+      var insertions = [
+        '@function --dyn-a() { result: 1px; }',
+        '@function --dyn-b(--x) { result: var(--x); }',
+        '@function --dyn-c(--n <type: <number>>) { result: calc(var(--n) * 1px); }',
+        '@function --dyn-d() returns <length> { result: 0px; }',
+        '@function --dyn-e(--a, --b) { --local1: calc(var(--a) + var(--b)); result: var(--local1); }',
+        '@function --dyn-f() { }',
+        '@function --dyn-g() { result: ; }'
+      ];
+      for (var i = 0; i < insertions.length; i++) {
+        try { sheet.insertRule(insertions[i], sheet.cssRules.length); } catch(e) {}
+      }
+    }
+  } catch(e) {}
+}
+
+// Apply inline styles using custom function calls on the target element
+function applyInlineStyles() {
+  try {
+    var target = document.getElementById('target');
+    if (target) {
+      var calls = [
+        '--fuzz-a()', '--fuzz-b(10px)', '--fuzz-c(red)',
+        '--fuzz-d(1, 2)', '--fuzz-e(--fuzz-a())'
+      ];
+      for (var i = 0; i < calls.length; i++) {
+        try { target.style.width = calls[i]; } catch(e) {}
+        try { target.style.setProperty('--cssvara', calls[i]); } catch(e) {}
+      }
+    }
+  } catch(e) {}
+}
+
+function jsfuzzer() {
+  try { registerCustomProperties(); } catch(e) {}
+  try { insertFunctionRules(); } catch(e) {}
+  try { forceStyleRecalc(); } catch(e) {}
+  try { mutateCSSFunctionRules(); } catch(e) {}
+  try { forceStyleRecalc(); } catch(e) {}
+  try { createFunctionAnimations(); } catch(e) {}
+  try { applyInlineStyles(); } catch(e) {}
+  try { forceStyleRecalc(); } catch(e) {}
+
+  // requestAnimationFrame mutation
+  requestAnimationFrame(function() {
+    try { mutateCSSFunctionRules(); } catch(e) {}
+    try { forceStyleRecalc(); } catch(e) {}
+    try { freememory(); } catch(e) {}
+  });
+}
+
+</script>
+</head>
+<body onload="jsfuzzer()">
+<div id="target" style="width:100px;height:100px;background:blue;">
+  <span id="child">test</span>
+</div>
+</body>
+</html>

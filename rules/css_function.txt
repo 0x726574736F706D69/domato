@@ -1,0 +1,120 @@
+# CSS @function fuzzing grammar
+# Targets CSSFunctionDescriptors / CSSFunctionRule (Chrome 133+)
+# Requires --enable-experimental-web-platform-features flag
+
+!include common.txt
+
+# --- Dimensional values for use in @function bodies ---
+<css-fuzz-length> = <fuzzint>px
+<css-fuzz-length> = <fuzzint>em
+<css-fuzz-length> = <fuzzint>rem
+<css-fuzz-length> = <fuzzint>vw
+<css-fuzz-length> = <fuzzint>vh
+<css-fuzz-length> = 0
+
+<css-fuzz-percent> = <fuzzint>%
+<css-fuzz-percent> = 0%
+
+<css-fuzz-angle> = <fuzzint>deg
+<css-fuzz-angle> = <fuzzint>rad
+<css-fuzz-angle> = <fuzzint>turn
+
+# --- Custom function names ---
+<css-func-name> = --fuzz-a
+<css-func-name> = --fuzz-b
+<css-func-name> = --fuzz-c
+<css-func-name> = --fuzz-d
+<css-func-name> = --fuzz-e
+
+# --- Argument type annotations (produce literal CSS type syntax) ---
+<css-arg-type> = <lt>length<gt>
+<css-arg-type> = <lt>number<gt>
+<css-arg-type> = <lt>percentage<gt>
+<css-arg-type> = <lt>color<gt>
+<css-arg-type> = <lt>image<gt>
+<css-arg-type> = <lt>integer<gt>
+<css-arg-type> = <lt>angle<gt>
+<css-arg-type> = <lt>time<gt>
+<css-arg-type> = <lt>resolution<gt>
+<css-arg-type> = <lt>transform-function<gt>
+<css-arg-type> = <lt>custom-ident<gt>
+<css-arg-type> = <lt>string<gt>
+<css-arg-type> = any
+
+# --- Simple values used inside function bodies ---
+<css-fuzz-value nonrecursive> = <css-fuzz-length>
+<css-fuzz-value nonrecursive> = <css-fuzz-percent>
+<css-fuzz-value nonrecursive> = <fuzzint>
+<css-fuzz-value nonrecursive> = <color>
+<css-fuzz-value> = var(--arg1)
+<css-fuzz-value> = var(--arg2)
+<css-fuzz-value> = var(--local1)
+<css-fuzz-value> = calc(var(--arg1) + var(--arg2))
+<css-fuzz-value> = calc(var(--arg1) * <fuzzint>)
+<css-fuzz-value> = calc(var(--arg1) + <css-fuzz-length>)
+<css-fuzz-value> = calc(<css-fuzz-length> - var(--arg1))
+<css-fuzz-value> = clamp(<css-fuzz-length>, var(--arg1), <css-fuzz-length>)
+<css-fuzz-value> = min(var(--arg1), var(--arg2))
+<css-fuzz-value> = max(var(--arg1), <css-fuzz-length>)
+<css-fuzz-value> = <css-func-name>(<css-fuzz-value>)
+
+# --- if() conditions (CSS Values 5) ---
+<css-condition> = style(--arg1: <fuzzint>)
+<css-condition> = (var(--arg1) > 0)
+<css-condition> = (var(--arg1) = <fuzzint>)
+<css-condition> = (var(--arg1) <lt> <css-fuzz-length>)
+<css-condition> = (var(--arg2) > <fuzzint>)
+
+# --- if() expressions ---
+<css-if-expr nonrecursive> = if(<css-condition>: <css-fuzz-value>; else: <css-fuzz-value>)
+<css-if-expr nonrecursive> = if(<css-condition>: <css-fuzz-value>)
+<css-if-expr> = if(<css-condition>: <css-if-expr>; else: <css-fuzz-value>)
+
+# --- Local variables inside function body ---
+<css-local-var> = --local1: <css-fuzz-value>;
+<css-local-var> = --local1: <css-fuzz-value>; --local2: <css-fuzz-value>;
+
+# --- Result descriptor ---
+<css-result> = result: <css-fuzz-value>;
+<css-result> = result: <css-if-expr>;
+<css-result> = result: var(--local1);
+<css-result> = result: calc(var(--arg1) + var(--arg2));
+<css-result> = result: ;
+
+# --- Complete @function rule body ---
+<css-func-body> = { <css-result> }
+<css-func-body> = { <css-local-var> <css-result> }
+<css-func-body> = { }
+<css-func-body> = { result: ; }
+
+# --- Argument declarations ---
+<css-func-arg> = --arg1
+<css-func-arg> = --arg1 <lt>type: <css-arg-type><gt>
+<css-func-arg> = --arg1 <lt>type: <css-arg-type><gt>: <css-fuzz-value>
+<css-func-arg> = --arg1, --arg2
+<css-func-arg> = --arg1 <lt>type: <css-arg-type><gt>, --arg2 <lt>type: <css-arg-type><gt>
+<css-func-arg> = --arg1 <lt>type: <css-arg-type><gt>: <css-fuzz-value>, --arg2 <lt>type: <css-arg-type><gt>
+
+# --- @function rules ---
+<css-function-rule> = @function <css-func-name>() <css-func-body>
+<css-function-rule> = @function <css-func-name>(<css-func-arg>) <css-func-body>
+<css-function-rule> = @function <css-func-name>(<css-func-arg>) returns <css-arg-type> <css-func-body>
+
+# --- Calling a custom function ---
+<css-func-call nonrecursive> = <css-func-name>()
+<css-func-call nonrecursive> = <css-func-name>(<css-fuzz-value>)
+<css-func-call> = <css-func-name>(<css-fuzz-value>, <css-fuzz-value>)
+<css-func-call> = <css-func-name>(<css-func-call>)
+
+# --- Usage in property values (for CSS properties that accept various types) ---
+<css-func-usage> = width: <css-func-call>
+<css-func-usage> = height: <css-func-call>
+<css-func-usage> = color: <css-func-call>
+<css-func-usage> = background-color: <css-func-call>
+<css-func-usage> = margin: <css-func-call>
+<css-func-usage> = padding: <css-func-call>
+<css-func-usage> = font-size: <css-func-call>
+<css-func-usage> = opacity: <css-func-call>
+
+# --- Root: multiple @function rules + usage rules ---
+<css-function-block root=true> = <css-function-rule><newline><css-function-rule><newline><css-function-rule><newline>div { <css-func-usage>; <css-func-usage>; }<newline>span { <css-func-usage>; }<newline>:root { <css-func-usage>; }
