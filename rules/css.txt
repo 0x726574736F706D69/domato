@@ -195,6 +195,47 @@
 <rule> = @media (prefers-color-scheme: light) { <selector> { <declaration> } }
 <rule> = @media (prefers-reduced-motion: reduce) { <selector> { <declaration> } }
 <rule> = @page { margin: <fuzzint>px; }
+<rule> = @function <dashedident>(--arg1: <lt>length<gt>) { result: <fuzzint>px; }
+<rule> = @function <dashedident>(--arg1: <lt>length<gt>) { --local1: <fuzzint>px; result: var(--local1); }
+<rule> = @function <dashedident>(--arg1: <lt>length<gt>, --arg2: <lt>length<gt>) { result: calc(var(--arg1) + var(--arg2)); }
+<rule> = @function <dashedident>(--arg1: <lt>length<gt>) { --local1: calc(var(--arg1) * 2); --local2: <fuzzint>px; result: var(--local1); }
+
+# CSSFunctionDeclarations — inline JS mutation snippets embedded in CSS output
+# These are valid CSS comment blocks containing <script> tags; browsers will
+# ignore them, but the domato post-processor can extract and inject them.
+<fn-decl-script> = <newline>/* begin-fn-decl-mutations */<newline><fn-decl-mutations-block><newline>/* end-fn-decl-mutations */<newline>
+
+<fn-decl-mutations-block> = <fn-decl-mutation-line>
+<fn-decl-mutations-block> = <fn-decl-mutation-line> <fn-decl-mutation-line>
+<fn-decl-mutations-block> = <fn-decl-mutation-line> <fn-decl-mutation-line> <fn-decl-mutation-line>
+
+<fn-decl-mutation-line> = // try { var _s = document.styleSheets[0]; if (_s) { var _r = _s.cssRules[0]; if (_r && _r.declarations) { _r.declarations.<fn-decl-cssom-op>; } } } catch(e) {}<newline>
+
+<fn-decl-cssom-op> = setProperty('result', '<fn-decl-result-val>')
+<fn-decl-cssom-op> = removeProperty('result')
+<fn-decl-cssom-op> = setProperty('--local1', '<fn-decl-length>')
+<fn-decl-cssom-op> = removeProperty('--local1')
+<fn-decl-cssom-op> = getPropertyValue('result')
+<fn-decl-cssom-op> = item(<fn-decl-idx>)
+<fn-decl-cssom-op> = length
+
+<fn-decl-result-val> = <fuzzint>px
+<fn-decl-result-val> = var(--arg1)
+<fn-decl-result-val> = calc(var(--arg1, 0px) + <fuzzint>px)
+<fn-decl-result-val> = none
+<fn-decl-result-val> = 
+<fn-decl-result-val> = !!!
+
+<fn-decl-length> = <fuzzint>px
+<fn-decl-length> = <fuzzint>em
+<fn-decl-length> = 0
+<fn-decl-length> = calc(<fuzzint>px + <fuzzint>em)
+
+<fn-decl-idx> = 0
+<fn-decl-idx> = 1
+<fn-decl-idx> = -1
+<fn-decl-idx> = 999999
+<fn-decl-idx> = <fuzzint>
 
 # CSS @function at-rule (Chrome 133+, CSSFunctionDescriptors)
 # Custom function names
