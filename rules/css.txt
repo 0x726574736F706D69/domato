@@ -237,7 +237,7 @@
 <fn-decl-idx> = 999999
 <fn-decl-idx> = <fuzzint>
 
-<fontfacedeclaration>= <fontfacedescriptor>;
+<fontfacedeclaration> = <fontfacedescriptor>;
 <fontfacedeclaration> = <fontfacedescriptor>; <fontfacedescriptor>; <fontfacedescriptor>;
 <fontfacedeclaration> = <fontfacedescriptor>; <fontfacedescriptor>; <fontfacedescriptor>; <fontfacedescriptor>; <fontfacedescriptor>; <fontfacedescriptor>;
 
